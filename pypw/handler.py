@@ -9,6 +9,10 @@
     :license: BSD, see LICENSE for more details.
 """
 
+from Crypto.Cipher import AES
+from Crypto import Random
+
+import os
 import logging
 
 
@@ -20,8 +24,9 @@ class Handler(object):
     def __init__(self):
         # Initialize Log
         self.log = logging.getLogger('pypw')
+        self.filepath = ''
 
-    def initialize(self, cipher):
+    def initialize(self, cipher, filepath=None):
         """
         validate the cipher and load the data from outside file.
         """
@@ -40,4 +45,30 @@ class Handler(object):
     def items(self):
         raise NotImplementedError
 
-    
+
+class AESHandler(Handler):
+    """
+    Hander use AES to encrypt/decrypt user infomations
+    """
+
+    def __init__(self):
+        self.key = b''
+
+    def initialize(self, cipher, filepath='records.dat'):
+        if not os.path.existx(filepath):
+            self._init_struct()
+            return
+
+    @classmethod
+    def encrypt(cls, plaintext, key):
+        iv = Random.new().read(AES.block_size)
+        cipher = AES.new(key, AES.MODE_CFB, iv)
+        msg = iv + cipher.encrypt(plaintext)
+        return msg
+
+    @classmethod
+    def decrypt(cls, ciphertext, key):
+        iv = Random.new().read(AES.block_size)
+        cipher = AES.new(key, AES.MODE_CFB, iv)
+        return cipher.decrypt(ciphertext)[AES.block_size:]
+        
