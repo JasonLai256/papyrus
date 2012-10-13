@@ -85,10 +85,6 @@ class AESHandler(object):
     def add_record(self, group, item, value, note=None):
         try:
             record = self._compose_record(group, item, value, note)
-            self.data['records'].append(record)
-            self.data['currentID'] += 1
-            if not self._records['gid'].has_key(record['gid']):
-                self.data['currentGID'] += 1
             self.write()
             self._adjust_structure(record)
             return True
@@ -134,16 +130,28 @@ class AESHandler(object):
         rid, gid = record['id'], record['gid']
         group = record['group']
         item = record['itemname']
-        self._records['rid'][rid] = record
-        self._records['gid'].setdefault(gid, []).append(record)
+        self._records['_rid'][rid] = record
+        self._records['_gid'].setdefault(gid, []).append(record)
         self._records[group][item] = record
+
+        # groupmap is a helper subdict contain (group, gid) pairs
+        if not self._records['_gidmap'].has_key(group):
+            self._records['_gidmap'][group] = record['gid']
 
     def _compose_record(self, group, item, value, note=None):
         created = datetime.today().isoformat('_')
-        # TODO: should judge the correct gid
+        if group in ('_rid', '_gid', '_gidmap'):
+            group = 'Invalid Group Name'
+            gid = float('nan')    # Not a number
+        elif self._records.has_key(group):
+            gid = self._records['_gidmap'][group]
+        else:
+            gid = self.data['currentGID']
+            self.data['currentGID'] += 1
+
         record = {
             'id': self.data['currentID'],
-            'gid': self.data['currentGID'],
+            'gid': gid,
             'group': group,
             'itemname': item,
             'value': value,
@@ -151,6 +159,8 @@ class AESHandler(object):
             'created': created,
             'updated': created,            
         }
+        self.data['currentID'] += 1
+        self.data['records'].append(record)
         return record
 
     @classmethod
