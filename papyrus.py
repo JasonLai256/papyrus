@@ -90,7 +90,6 @@ class AESHandler(object):
             return True
         except Exception, err:
             self.log.error('Error occur in adding record - %s', err)
-            raise
             return False
 
     def update_record(self, group, item, value, note=None):
@@ -98,12 +97,36 @@ class AESHandler(object):
             try:
                 record = self._records[group][item]
                 record['value'] = value
+                record['updated'] = datetime.today().isoformat('_')
                 if note:
                     record['note'] = note
                 self.write()
                 return True
             except Exception, err:
                 self.log.error('Error occur in updating record - %s', err)
+                return False
+        else:
+            return False
+
+    def delete_record(self, group, item):
+        if self._records.has_key(group) and self._records[group].has_key(item):
+            try:
+                record = self._records[group][item]
+                rid, gid = record['id'], record['gid']
+                del self._records['_rid'][rid]
+                del self._records[group][item]
+                if len(self._records['_gid'][gid]) == 1:
+                    del self._records['_gid'][gid]
+                    del self._records[group]
+
+                for i in range(len(self.data['records'])):
+                    if self.data['records'][i]['id'] == rid:
+                        del self.data['records'][i]
+                        break
+                self.write()
+                return True
+            except Exception, err:
+                self.log.error('Error occur in deleting record - %s', err)
                 return False
         else:
             return False
@@ -140,6 +163,7 @@ class AESHandler(object):
 
     def _compose_record(self, group, item, value, note=None):
         created = datetime.today().isoformat('_')
+        # handle some state about group id
         if group in ('_rid', '_gid', '_gidmap'):
             group = 'Invalid Group Name'
             gid = float('nan')    # Not a number
@@ -150,6 +174,7 @@ class AESHandler(object):
             self.data['currentGID'] += 1
 
         record = {
+            # the `id` is increase use the currentID field
             'id': self.data['currentID'],
             'gid': gid,
             'group': group,
@@ -157,7 +182,7 @@ class AESHandler(object):
             'value': value,
             'note': note,
             'created': created,
-            'updated': created,            
+            'updated': created,
         }
         self.data['currentID'] += 1
         self.data['records'].append(record)

@@ -17,6 +17,44 @@ class TestAESHandler(unittest.TestCase):
     def tearDown(self):
         self.tmpfile.close()
 
+
+    def test_update_delete(self):
+        self.assertTrue(self.handler.add_record(u'bank', u'boa', u'kkk3000'))
+        self.assertTrue(self.handler.add_record(u'web', u'google', u'answer42'))
+        self.assertTrue(self.handler.add_record(u'web', u'facebook', u'lol2012'))
+
+        # update a record that `id` equals to 1, `gid` equals to 1
+        updated = self.handler._records[u'web'][u'google']['updated']
+        self.assertTrue(
+            self.handler.update_record(u'web', u'google', u'google42', u'a note')
+        )
+        self.assertEqual(self.handler.data['records'][1]['value'], u'google42')
+        self.assertEqual(self.handler.data['records'][0]['note'], None)
+        self.assertEqual(self.handler.data['records'][1]['note'], u'a note')
+        self.assertEqual(self.handler.data['records'][1]['value'],
+                         self.handler._records[u'web'][u'google']['value'])
+        self.assertEqual(self.handler.data['records'][1]['note'],
+                         self.handler._records[u'web'][u'google']['note'])
+        self.assertNotEqual(self.handler._records[u'web'][u'google']['updated'],
+                            updated)
+
+        # delete a record that `id` equals to 0 and 2, `gid` equals to 0 and 1
+        self.assertEqual(len(self.handler._records['_gid']), 2)
+        self.assertTrue(self.handler.delete_record(u'bank', u'boa'))
+        self.assertEqual(len(self.handler._records['_gid']), 1)
+        self.assertTrue(self.handler.delete_record(u'web', u'facebook'))
+        self.assertEqual(len(self.handler._records['_gid']), 1)
+
+        self.assertEqual(len(self.handler.data['records']), 1)
+        self.assertFalse(self.handler._records['_rid'].has_key(0))
+        self.assertFalse(self.handler._records['_rid'].has_key(2))
+        self.assertFalse(self.handler._records['_gid'].has_key(0))
+        self.assertTrue(self.handler._records['_gid'].has_key(1))
+        self.assertFalse(self.handler._records.has_key(u'bank'))
+        self.assertTrue(self.handler._records.has_key(u'web'))
+        self.assertFalse(self.handler._records[u'web'].has_key(u'facebook'))
+
+
     def test_data_persistance(self):
         self.assertTrue(self.handler.add_record(u'web', u'facebook', u'lol2012'))
         self.assertTrue(self.handler.add_record(u'web', u'google', u'answer42'))
@@ -52,12 +90,14 @@ class TestAESHandler(unittest.TestCase):
                 self.assertEqual(self.handler.data['records'][i][key],
                                  handler2.data['records'][i][key])
 
+
     def test_32byte_key_generate(self):
         key1 = AESHandler.figure_32Byte_key('not enough 32 bytes')
         key2 = AESHandler.figure_32Byte_key('exceed 32 bytes' * 3)
         self.assertTrue(key1.startswith('not enough 32 bytes'))
         self.assertEqual(len(key1), 32)
         self.assertEqual(len(key2), 32)
+
 
     def test_encrypt_and_decrypt(self):
         key = AESHandler.figure_32Byte_key('provide a key')
