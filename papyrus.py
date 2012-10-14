@@ -1,9 +1,9 @@
 # -*- coding:utf-8 -*-
 """
-    pypw.handler
-    ~~~~~~~~~~~~
+    papyrus
+    ~~~~~~~
 
-    Implements the actually handling object for pypw.
+    A simple cmd program that manage the infomation of passwords.
 
     :copyright: (c) 2012 by Jason Lai.
     :license: BSD, see LICENSE for more details.
@@ -11,6 +11,7 @@
 
 import os
 import json
+import cmd
 import logging
 import hashlib
 from datetime import datetime
@@ -28,7 +29,7 @@ class AESHandler(object):
 
     def __init__(self):
         # Initialize Log
-        self.log = logging.getLogger('pypw')
+        self.log = logging.getLogger('papyrus')
         # Initialize the attributes of class
         self.initialized = False
         self.filepath = ''
@@ -133,7 +134,7 @@ class AESHandler(object):
 
     @property
     def records(self):
-        pass
+        return self._records
 
     def _init_data(self):
         structure = {
@@ -212,3 +213,72 @@ class AESHandler(object):
         iv = Random.new().read(AES.block_size)
         cipher = AES.new(key, AES.MODE_CFB, iv)
         return cipher.decrypt(ciphertext)[AES.block_size:]
+
+
+class Papyrus(cmd.Cmd):
+    """A simple cmd program that manage the infomation of passwords."""
+
+    prompt = u'(papyrus) >>> '
+    intro = ("Papyrus: A simple cmd program that manage the infomation of "
+             "passwords.\n")
+
+    def do_init(self, line):
+        """Help message:
+        Usage: init [init_cipher]
+        
+        Initialize the program. This operation should be launched before
+        other operations.
+        """
+        print line
+
+    def do_ls(self, line):
+        """Help message:
+        Usage: ls {group | record | `group_name` | `group_id`}
+        
+        List all the groups or records existing in the current program.
+        """
+        print line
+
+    def do_add(self, line):
+        """Help message:
+        Usage:
+        """
+        pass
+
+    def do_update(self, line):
+        """Help message:
+        Usage:
+        """
+        pass
+
+    def do_del(self, line):
+        """Help message:
+        Usage:
+        """
+        pass
+
+    def complete_del(self, text, line, begidx, endidx):
+        pass
+
+    def complete_update(self, text, line, begidx, endidx):
+        pass
+
+    def complete_ls(self, text, line, begidx, endidx):
+        pass
+
+    def do_quit(self, line):
+        """Help message:
+        Usage: quit
+        
+        Exit the program.
+        """
+        return True
+
+    def do_EOF(self, line):
+        """Exit"""
+        return True
+
+
+if __name__ == '__main__':
+    Papyrus().cmdloop()
+
