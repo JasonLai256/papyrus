@@ -3,7 +3,8 @@
     papyrus
     ~~~~~~~
 
-    A simple cmd program that manage the infomation of passwords.
+    A safely (use AES256 encrypt/decrypt) simple cmd program that manage
+    the infomation of passwords.
 
     :copyright: (c) 2012 by Jason Lai.
     :license: BSD, see LICENSE for more details.
@@ -216,7 +217,9 @@ class AESHandler(object):
 
 
 class Papyrus(cmd.Cmd):
-    """A simple cmd program that manage the infomation of passwords."""
+    """A safely (use AES256 encrypt/decrypt) simple cmd program that manage
+    the infomation of passwords.
+    """
 
     prompt = u'(papyrus) >>> '
     intro = ("Papyrus: A simple cmd program that manage the infomation of "
@@ -281,4 +284,3 @@ class Papyrus(cmd.Cmd):
 
 if __name__ == '__main__':
     Papyrus().cmdloop()
-
