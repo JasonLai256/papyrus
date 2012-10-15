@@ -94,10 +94,10 @@ class AESHandler(object):
             self.log.error('Error occur in adding record - %s', err)
             return False
 
-    def update_record(self, group, item, value, note=None):
-        if self._records.has_key(group) and self._records[group].has_key(item):
+    def update_record(self, record_id, value, note=None):
+        if self._records['_rid'].has_key(record_id):
             try:
-                record = self._records[group][item]
+                record = self._records['_rid'][record_id]
                 record['value'] = value
                 record['updated'] = datetime.today().isoformat('_')
                 if note:
@@ -110,17 +110,25 @@ class AESHandler(object):
         else:
             return False
 
-    def delete_record(self, group, item):
-        if self._records.has_key(group) and self._records[group].has_key(item):
+    def delete_record(self, record_id):
+        if self._records['_rid'].has_key(record_id):
             try:
-                record = self._records[group][item]
+                record = self._records['_rid'][record_id]
                 rid, gid = record['id'], record['gid']
+                group, item = record['group'], record['itemname']
                 del self._records['_rid'][rid]
                 del self._records[group][item]
                 if len(self._records['_gid'][gid]) == 1:
                     del self._records['_gid'][gid]
                     del self._records[group]
+                else:
+                    # delete the record in the _records['_gid']
+                    for i in range(len(self._records['_gid'][gid])):
+                        if self._records['_gid'][gid][i]['id'] == rid:
+                            del self._records['_gid'][gid][i]
+                            break
 
+                # delete the record in the data['records']
                 for i in range(len(self.data['records'])):
                     if self.data['records'][i]['id'] == rid:
                         del self.data['records'][i]
@@ -129,6 +137,7 @@ class AESHandler(object):
                 return True
             except Exception, err:
                 self.log.error('Error occur in deleting record - %s', err)
+                raise
                 return False
         else:
             return False
@@ -216,6 +225,11 @@ class AESHandler(object):
         return cipher.decrypt(ciphertext)[AES.block_size:]
 
 
+class PapyrusException(Exception):
+    """Exception class for papyrus."""
+    pass
+
+
 class Papyrus(cmd.Cmd):
     """A safely (use AES256 encrypt/decrypt) simple cmd program that manage
     the infomation of passwords.
@@ -225,14 +239,44 @@ class Papyrus(cmd.Cmd):
     intro = ("Papyrus: A simple cmd program that manage the infomation of "
              "passwords.\n")
 
+    def __init__(self):
+        self.handler = AESHandler()
+        cmd.Cmd.__init__(self)
+
+    def onecmd(self, line):
+        """
+        overriding the onecmd method in base class that change default behavior.
+        """
+        try:
+            return cmd.Cmd.onecmd(self, line)
+        except PapyrusException, err:
+            # There is use the PapyrusException to transmit failed infomation.
+            # Then print the papyrus info's message to the STDOUT.
+            # If has any doubt about the codes, please check the cmd source.
+            print(err.message)
+
+    def _validate_line(self, line, lengths, cmd):
+        err_msg = "\nPlease type `help {0}` get help message!".format(cmd)
+        if not line:
+            raise PapyrusException(err_msg)
+        argv = line.strip().split()
+        if len(argv) not in lengths:
+            raise PapyrusException(err_msg)
+
+        return argv
+
     def do_init(self, line):
         """Help message:
-        Usage: init [init_cipher]
+        Usage: init init_cipher [filepath]
         
         Initialize the program. This operation should be launched before
         other operations.
+        The `filepath` argument is the path of the file contain the infomation
+        of passwords. By default, `filepath` is 'records.dat'.
         """
-        print line
+        argv = self._validate_line(line, lengths=(1, 2), cmd='init')
+        if not self.handler.initialize(*argv):
+            raise PapyrusException("\nFail to initialize the program.")
 
     def do_ls(self, line):
         """Help message:
@@ -240,34 +284,73 @@ class Papyrus(cmd.Cmd):
         
         List all the groups or records existing in the current program.
         """
-        print line
+        argv = self._validate_line(line, lengths=(1), cmd='ls')
+        target = argv[0]
+
+        if target is 'group':
+            # match the group
+            for item in self.handler.records:
+                if item not in ('_rid', '_gid'):
+                    # a dirty hack for figure out group_id
+                    gid = self.handler.records[item].values()[0]['gid']    
+                    print "({0}, {1})".format(gid, item)
+
+        elif target is 'record':
+            # match the record
+            for record in self.handler.records['_rid'].values():
+                print "({0}, {1})".format(record['rid'], record['itemname'])
+
+        elif target in self.handler.records['_gid']:
+            # match the group_id
+            for record in self.handler.records['_gid'][target]:
+                print "({0}, {1})".format(record['rid'], record['itemname'])
+
+        elif target in self.handler.records:
+            # match the group_name
+            for itemname in self.handler.records[target].values():
+                record = self.handler.records[target][itemname]
+                print "({0}, {1})".format(record['rid'], record['itemname'])
+        else:
+            raise PapyrusException("\nFail to list the '{0}'.".format(target))
 
     def do_add(self, line):
         """Help message:
-        Usage:
+        Usage: add group item value [note]
+
+        Add a record to the program.
         """
-        pass
+        argv = self._validate_line(line, lengths=(3, 4), cmd='add')
+        if not self.handler.add_record(*argv):
+            raise PapyrusException("\nFail to add record to the program.")
 
     def do_update(self, line):
         """Help message:
-        Usage:
-        """
-        pass
+        Usage: update record_id value [note]
 
-    def do_del(self, line):
+        Update a record to the program.
+        """
+        argv = self._validate_line(line, lengths=(2, 3), cmd='update')
+        if not self.handler.update_record(*argv):
+            raise PapyrusException("\nFail to update record to the program.")
+
+    def do_delete(self, line):
         """Help message:
-        Usage:
+        Usage: delete record_id
+
+        Delete a record to the program.
         """
-        pass
+        argv = self._validate_line(line, lengths=(1), cmd='delete')
+        if not self.handler.delete_record(*argv):
+            raise PapyrusException("\nFail to delete record to the program.")
 
-    def complete_del(self, text, line, begidx, endidx):
-        pass
+    # def complete_delete(self, text, line, begidx, endidx):
+    #     pass
 
-    def complete_update(self, text, line, begidx, endidx):
-        pass
+    # def complete_update(self, text, line, begidx, endidx):
+    #     pass
 
-    def complete_ls(self, text, line, begidx, endidx):
-        pass
+    # def complete_ls(self, text, line, begidx, endidx):
+    #     pass
 
     def do_quit(self, line):
         """Help message:

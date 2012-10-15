@@ -4,7 +4,7 @@ import unittest
 import tempfile
 import math
 
-from handler import AESHandler
+from papyrus import AESHandler
 
 
 class TestAESHandler(unittest.TestCase):
@@ -26,7 +26,7 @@ class TestAESHandler(unittest.TestCase):
         # update a record that `id` equals to 1, `gid` equals to 1
         updated = self.handler._records[u'web'][u'google']['updated']
         self.assertTrue(
-            self.handler.update_record(u'web', u'google', u'google42', u'a note')
+            self.handler.update_record(1, u'google42', u'a note')
         )
         self.assertEqual(self.handler.data['records'][1]['value'], u'google42')
         self.assertEqual(self.handler.data['records'][0]['note'], None)
@@ -40,10 +40,12 @@ class TestAESHandler(unittest.TestCase):
 
         # delete a record that `id` equals to 0 and 2, `gid` equals to 0 and 1
         self.assertEqual(len(self.handler._records['_gid']), 2)
-        self.assertTrue(self.handler.delete_record(u'bank', u'boa'))
+        self.assertTrue(self.handler.delete_record(0))
         self.assertEqual(len(self.handler._records['_gid']), 1)
-        self.assertTrue(self.handler.delete_record(u'web', u'facebook'))
+        self.assertEqual(len(self.handler._records['_gid'][1]), 2)
+        self.assertTrue(self.handler.delete_record(2))
         self.assertEqual(len(self.handler._records['_gid']), 1)
+        self.assertEqual(len(self.handler._records['_gid'][1]), 1)
 
         self.assertEqual(len(self.handler.data['records']), 1)
         self.assertFalse(self.handler._records['_rid'].has_key(0))
