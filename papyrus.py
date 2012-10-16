@@ -95,6 +95,7 @@ class AESHandler(object):
             return False
 
     def update_record(self, record_id, value, note=None):
+        record_id = int(record_id)
         if self._records['_rid'].has_key(record_id):
             try:
                 record = self._records['_rid'][record_id]
@@ -111,6 +112,7 @@ class AESHandler(object):
             return False
 
     def delete_record(self, record_id):
+        record_id = int(record_id)
         if self._records['_rid'].has_key(record_id):
             try:
                 record = self._records['_rid'][record_id]
@@ -253,10 +255,11 @@ class Papyrus(cmd.Cmd):
             # There is use the PapyrusException to transmit failed infomation.
             # Then print the papyrus info's message to the STDOUT.
             # If has any doubt about the codes, please check the cmd source.
-            print(err.message)
+            print err.message
 
     def _validate_line(self, line, lengths, cmd):
-        err_msg = "\nPlease type `help {0}` get help message!".format(cmd)
+        err_msg = (u"\nThe command `{0} {1}` is incorrect, please type "
+                   u"`help {2}` get help message!\n").format(cmd, line, cmd)
         if not line:
             raise PapyrusException(err_msg)
         argv = line.strip().split()
@@ -264,6 +267,13 @@ class Papyrus(cmd.Cmd):
             raise PapyrusException(err_msg)
 
         return argv
+
+    def _validate_init(self):
+        if not self.handler.initialized:
+            err_msg = (u"\nERROR: Any operation of the Papyrus should first "
+                       u"initialize by use the command `init`.\nYou can see the "
+                       u"help text of the initial operation by type `help init`.\n")
+            raise PapyrusException(err_msg)
 
     def do_init(self, line):
         """Help message:
@@ -276,72 +286,95 @@ class Papyrus(cmd.Cmd):
         """
         argv = self._validate_line(line, lengths=(1, 2), cmd='init')
         if not self.handler.initialize(*argv):
-            raise PapyrusException("\nFail to initialize the program.")
+            raise PapyrusException(u"\nFail to initialize the program.\n")
 
     def do_ls(self, line):
         """Help message:
-        Usage: ls {group | record | `group_name` | `group_id`}
+        Usage: ls {groups | records | `group_name` | `group_id`}
         
         List all the groups or records existing in the current program.
+        Note: to use this command should first initialize the Papyrus.
         """
-        argv = self._validate_line(line, lengths=(1), cmd='ls')
+        self._validate_init()
+        argv = self._validate_line(line, lengths=(1,), cmd='ls')
         target = argv[0]
+        if target.isdigit():
+            target = int(target)
 
-        if target is 'group':
-            # match the group
+        # match the `group` keyword
+        if target == 'groups':
+            print u"* List all (group_id, group) pairs:"
             for item in self.handler.records:
-                if item not in ('_rid', '_gid'):
+                if item not in ('_rid', '_gid', '_gidmap'):
                     # a dirty hack for figure out group_id
-                    gid = self.handler.records[item].values()[0]['gid']    
-                    print "({0}, {1})".format(gid, item)
+                    # print self.handler.records[item].items()
+                    # print self.handler.records[item].values()[0]
+                    gid = self.handler.records[item].values()[0]['gid']
+                    print u"\t({0}, {1})".format(gid, item)
 
-        elif target is 'record':
-            # match the record
+        # match the `record` keyword
+        elif target == 'records':
+            print u"* List all (record_id, record) pairs:"
             for record in self.handler.records['_rid'].values():
-                print "({0}, {1})".format(record['rid'], record['itemname'])
+                print u"\t({0}, {1})".format(record['id'], record['itemname'])
 
+        # match the group_id
         elif target in self.handler.records['_gid']:
-            # match the group_id
+            groupname = self.handler.records['_gid'][target][0]['group']
+            print (u"* List all infomation of the records in "
+                                          "Group - `{0}`:").format(groupname)
+            print u"\t(record_id, group, itemname, value)"
             for record in self.handler.records['_gid'][target]:
-                print "({0}, {1})".format(record['rid'], record['itemname'])
-
-        elif target in self.handler.records:
-            # match the group_name
-            for itemname in self.handler.records[target].values():
+                print u"\t({0}, {1}, {2}, {3})".format(record['id'], record['group'],
+                                                 record['itemname'], record['value'])
+        # match the group_name
+        elif target in self.handler.records and \
+                             target not in ('_rid', '_gid', '_gidmap'):
+            print (u"* List all infomation of the records in "
+                                          "Group - `{0}`:").format(target)
+            print u"\t(record_id, group, itemname, value)"
+            for itemname in self.handler.records[target].keys():
                 record = self.handler.records[target][itemname]
-                print "({0}, {1})".format(record['rid'], record['itemname'])
+                print u"\t({0}, {1}, {2}, {3})".format(record['id'], record['group'],
+                                                 record['itemname'], record['value'])
         else:
-            raise PapyrusException("\nFail to list the '{0}'.".format(target))
+            raise PapyrusException(u"\nFail to list the '{0}'.\n".format(target))
 
     def do_add(self, line):
         """Help message:
         Usage: add group item value [note]
 
         Add a record to the program.
+        Note: to use this command should first initialize the Papyrus.
         """
+        self._validate_init()
         argv = self._validate_line(line, lengths=(3, 4), cmd='add')
         if not self.handler.add_record(*argv):
-            raise PapyrusException("\nFail to add record to the program.")
+            raise PapyrusException(u"\nFail to add record to the program.\n")
 
     def do_update(self, line):
         """Help message:
         Usage: update record_id value [note]
 
         Update a record to the program.
+        Note: to use this command should first initialize the Papyrus.
         """
+        self._validate_init()
         argv = self._validate_line(line, lengths=(2, 3), cmd='update')
         if not self.handler.update_record(*argv):
-            raise PapyrusException("\nFail to update record to the program.")
+            raise PapyrusException(u"\nFail to update record to the program.\n")
 
     def do_delete(self, line):
         """Help message:
         Usage: delete record_id
 
         Delete a record to the program.
+        Note: to use this command should first initialize the Papyrus.
         """
-        argv = self._validate_line(line, lengths=(1), cmd='delete')
+        self._validate_init()
+        argv = self._validate_line(line, lengths=(1,), cmd='delete')
         if not self.handler.delete_record(*argv):
-            raise PapyrusException("\nFail to delete record to the program.")
+            raise PapyrusException(u"\nFail to delete record to the program.\n")
 
     # def complete_delete(self, text, line, begidx, endidx):
     #     pass
