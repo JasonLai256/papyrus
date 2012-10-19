@@ -11,10 +11,12 @@
 """
 
 import os
+import sys
 import json
 import cmd
 import logging
 import hashlib
+import getpass
 from datetime import datetime
 from collections import defaultdict
 
@@ -23,8 +25,7 @@ from Crypto import Random
 
 
 class AESHandler(object):
-    """
-    Handler that control and manage the infomations of user, use 
+    """Handler that control and manage the infomations of user, use 
     AES to encrypt/decrypt user infomations
     """
 
@@ -76,8 +77,7 @@ class AESHandler(object):
         return self.initialized
 
     def write(self):
-        """
-        encrypt the infomations and dump into outside file.
+        """encrypt the infomations and dump into outside file.
         """
         jsontext = json.dumps(self.data)
         with open(self.filepath, 'w') as f:
@@ -238,16 +238,31 @@ class Papyrus(cmd.Cmd):
     """
 
     prompt = u'(papyrus) >>> '
-    intro = ("Papyrus: A simple cmd program that manage the infomation of "
+    introduction = ("Papyrus: A simple cmd program that manage the infomation of "
              "passwords.\n")
 
-    def __init__(self):
+    def preloop(self):
+        """Overriding the onecmd method in base class for initialize the 
+        program. This operation should be launched before other operations.
+        """
         self.handler = AESHandler()
-        cmd.Cmd.__init__(self)
+        try:
+            self.stdout.write(str(self.introduction)+"\n")
+            self.stdout.write(u"Enter Info's File Path (default `records.dat`): ")
+            self.stdout.flush()
+            filepath = self.stdin.readline().strip()
+            if not filepath:
+                filepath = 'records.dat'
+            pw = getpass.getpass(u'Please Enter The Initiali Cipher: ')
+            if not self.handler.initialize(pw, filepath):
+                sys.exit('ERROR: invalid cipher or unknown exception.')
+        except Exception, err:
+            print 'ERROR:', err
+            sys.exit(1)
 
     def onecmd(self, line):
-        """
-        overriding the onecmd method in base class that change default behavior.
+        """overriding the onecmd method in base class that change default
+        behavior.
         """
         try:
             return cmd.Cmd.onecmd(self, line)
@@ -258,8 +273,9 @@ class Papyrus(cmd.Cmd):
             print err.message
 
     def _validate_line(self, line, lengths, cmd):
-        err_msg = (u"\nThe command `{0} {1}` is incorrect, please type "
-                   u"`help {2}` get help message!\n").format(cmd, line, cmd)
+        line = line.decode('utf-8')
+        err_msg = (u"The command `{0} {1}` is incorrect, please type "
+                   u"`help {2}` get help message!").format(cmd, line, cmd)
         if not line:
             raise PapyrusException(err_msg)
         argv = line.strip().split()
@@ -268,122 +284,172 @@ class Papyrus(cmd.Cmd):
 
         return argv
 
-    def _validate_init(self):
-        if not self.handler.initialized:
-            err_msg = (u"\nERROR: Any operation of the Papyrus should first "
-                       u"initialize by use the command `init`.\nYou can see the "
-                       u"help text of the initial operation by type `help init`.\n")
-            raise PapyrusException(err_msg)
+    def _ls_case_groups(self, target):
+        print u"* List all (group_id, group) pairs:"
+        for group in self.handler.records:
+            if group not in ('_rid', '_gid', '_gidmap'):
+                gid = self.handler.records['_gidmap'][group]
+                print u"\t({0}, {1})".format(gid, group)
 
-    def do_init(self, line):
-        """Help message:
-        Usage: init init_cipher [filepath]
-        
-        Initialize the program. This operation should be launched before
-        other operations.
-        The `filepath` argument is the path of the file contain the infomation
-        of passwords. By default, `filepath` is 'records.dat'.
-        """
-        argv = self._validate_line(line, lengths=(1, 2), cmd='init')
-        if not self.handler.initialize(*argv):
-            raise PapyrusException(u"\nFail to initialize the program.\n")
+    def _ls_case_records(self, target):
+        print u"* List all (record_id, record) pairs:"
+        for record in self.handler.records['_rid'].values():
+            print u"\t({0}, {1})".format(record['id'], record['itemname'])
+
+    def _ls_case_group_id(self, target):
+        groupname = self.handler.records['_gid'][target][0]['group']
+        print (u"* List all infomation of the records in Group - `{0}`:\n"
+               u"\t(record_id, group, itemname, value)").format(groupname)
+        for record in self.handler.records['_gid'][target]:
+            enc_value = '****'.join((record['value'][0], record['value'][-1]))
+            print u"\t({0}, {1}, {2}, {3})".format(record['id'], record['group'],
+                                                   record['itemname'], enc_value)
+
+    def _ls_case_group_name(self, target):
+        print (u"* List all infomation of the records in Group - `{0}`:\n"
+               u"\t(record_id, group, itemname, value)").format(target)
+        for itemname in self.handler.records[target].keys():
+            record = self.handler.records[target][itemname]
+            enc_value = '****'.join((record['value'][0], record['value'][-1]))
+            print u"\t({0}, {1}, {2}, {3})".format(record['id'], record['group'],
+                                                   record['itemname'], enc_value)        
 
     def do_ls(self, line):
         """Help message:
         Usage: ls {groups | records | `group_name` | `group_id`}
+
+        selected args::
+          - `group`:  literal key word, show all the groups
+          - `records`:  literal key word, show all the records
+          - group_name: group name, show all the records in the specific group
+          - group_id:  group id, show all the records in the specific group
         
         List all the groups or records existing in the current program.
-        Note: to use this command should first initialize the Papyrus.
         """
-        self._validate_init()
-        argv = self._validate_line(line, lengths=(1,), cmd='ls')
+        argv = self._validate_line(line, lengths=(1, 2), cmd='ls')
         target = argv[0]
         if target.isdigit():
             target = int(target)
 
         # match the `group` keyword
         if target == 'groups':
-            print u"* List all (group_id, group) pairs:"
-            for item in self.handler.records:
-                if item not in ('_rid', '_gid', '_gidmap'):
-                    # a dirty hack for figure out group_id
-                    # print self.handler.records[item].items()
-                    # print self.handler.records[item].values()[0]
-                    gid = self.handler.records[item].values()[0]['gid']
-                    print u"\t({0}, {1})".format(gid, item)
-
+            self._ls_case_groups(target)
         # match the `record` keyword
         elif target == 'records':
-            print u"* List all (record_id, record) pairs:"
-            for record in self.handler.records['_rid'].values():
-                print u"\t({0}, {1})".format(record['id'], record['itemname'])
-
+            self._ls_case_records(target)
         # match the group_id
         elif target in self.handler.records['_gid']:
-            groupname = self.handler.records['_gid'][target][0]['group']
-            print (u"* List all infomation of the records in "
-                                          "Group - `{0}`:").format(groupname)
-            print u"\t(record_id, group, itemname, value)"
-            for record in self.handler.records['_gid'][target]:
-                print u"\t({0}, {1}, {2}, {3})".format(record['id'], record['group'],
-                                                 record['itemname'], record['value'])
+            self._ls_case_group_id(target)
         # match the group_name
         elif target in self.handler.records and \
                              target not in ('_rid', '_gid', '_gidmap'):
-            print (u"* List all infomation of the records in "
-                                          "Group - `{0}`:").format(target)
-            print u"\t(record_id, group, itemname, value)"
-            for itemname in self.handler.records[target].keys():
-                record = self.handler.records[target][itemname]
-                print u"\t({0}, {1}, {2}, {3})".format(record['id'], record['group'],
-                                                 record['itemname'], record['value'])
+            self._ls_case_group_name(target)
         else:
-            raise PapyrusException(u"\nFail to list the '{0}'.\n".format(target))
+            print u"Fail to list the '{0}'.".format(target)
+            print u"Usage: ls {groups | records | `group_name` | `group_id`}"
+
+    def do_info(self, line):
+        """Help message:
+        Usage: info record_id
+
+        args::
+          - record_id:  the id of the record, `ls` is a useful command for
+                        lookup the record id.
+
+        Show the full infomation about specific record.
+        """
+        argv = self._validate_line(line, lengths=(1,), cmd='info')
+        try:
+            rid = int(argv[0])
+            record = self.handler.records['_rid'][rid]
+        except ValueError:
+            print "The `record_id` should be a integer."
+            return
+        except KeyError:
+            print "The `record_id` - {0} - not exist.".format(rid)
+            return
+        print u"The infomation of record - `{0}`:".format(rid)
+        print u'       id: ', record['id']
+        print u'      gid: ', record['gid']
+        print u'    group: ', record['group']
+        print u'   record: ', record['itemname']
+        print u'    value: ', record['value']
+        print u'     note: ', record['note']
+        print u'  created: ', record['created']
+        print u'   update: ', record['updated']
 
     def do_add(self, line):
         """Help message:
         Usage: add group item value [note]
 
+        args::
+          - group:  group name of the record.
+          - item:   item name of the record.
+          - value:  value of the record. well, there is the place store the password.
+          - note(optional):  note of the record, the lengths of the note is unlimit.
+
         Add a record to the program.
-        Note: to use this command should first initialize the Papyrus.
         """
-        self._validate_init()
         argv = self._validate_line(line, lengths=(3, 4), cmd='add')
         if not self.handler.add_record(*argv):
-            raise PapyrusException(u"\nFail to add record to the program.\n")
+            raise PapyrusException(u"Fail to add record to the program.")
 
     def do_update(self, line):
         """Help message:
         Usage: update record_id value [note]
 
+        args::
+          - record_id:  the id of the record, `ls` is a useful command for
+                        lookup the record id.
+
         Update a record to the program.
-        Note: to use this command should first initialize the Papyrus.
         """
-        self._validate_init()
         argv = self._validate_line(line, lengths=(2, 3), cmd='update')
         if not self.handler.update_record(*argv):
-            raise PapyrusException(u"\nFail to update record to the program.\n")
+            raise PapyrusException(u"Fail to update record to the program.")
 
     def do_delete(self, line):
         """Help message:
         Usage: delete record_id
 
+        args::
+          - record_id:  the id of the record, `ls` is a useful command for
+                        lookup the record id.
+
         Delete a record to the program.
-        Note: to use this command should first initialize the Papyrus.
         """
-        self._validate_init()
         argv = self._validate_line(line, lengths=(1,), cmd='delete')
         if not self.handler.delete_record(*argv):
-            raise PapyrusException(u"\nFail to delete record to the program.\n")
-
-    # def complete_delete(self, text, line, begidx, endidx):
-    #     pass
+            raise PapyrusException(u"Fail to delete record to the program.")
 
     # def complete_update(self, text, line, begidx, endidx):
-    #     pass
+    #     clist = []
+    #     for record in self.handler.records['_rid'].values():
+    #         rid, itemname = record['id'], record['itemname']
+    #         clist.append(u"({0}, {1})".format(rid, itemname))
+
+    #     if not text:
+    #         completions = clist[:]
+    #         return completions
 
     # def complete_ls(self, text, line, begidx, endidx):
-    #     pass
+    #     clist = [u'groups', u'records']
+    #     for group, gid in self.handler.records['_gidmap'].items():
+    #         clist.append(u"({0}, {1})".format(gid, group))
+
+    #     if not text:
+    #         completions = clist[:]
+    #         return completions
+
+    # def complete_info(self, text, line, begidx, endidx):
+    #     clist = []
+    #     for record in self.handler.records['_rid'].values():
+    #         rid, itemname = record['id'], record['itemname']
+    #         clist.append(u"({0}, {1})".format(rid, itemname))
+
+    #     if not text:
+    #         completions = clist[:]
+    #         return completions
 
     def do_quit(self, line):
         """Help message:
