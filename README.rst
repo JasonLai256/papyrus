@@ -34,7 +34,7 @@ Support Commands:
         - group:  group name of the record.
         - item:   item name of the record.
         - value:  value of the record. well, there is the place store the password.
-        - note(optional):  note of the record, the lengths of the note is unlimit.
+	- note(optional):  note of the record, the lengths of the note is unlimit but should be within the quotation marks (' or ").
 
       Add a record to the program.
 
@@ -43,6 +43,7 @@ Support Commands:
 
       args:
         - record_id:  the id of the record, `ls` is a useful command for lookup the record id.
+	- note(optional):  note of the record, the lengths of the note is unlimit but should be within the quotation marks (' or ").
 
       Update a record to the program.
 
@@ -74,7 +75,7 @@ some instance::
   ======================
   help
 
-  (papyrus) >>> add web yahoo apassword
+  (papyrus) >>> add web yahoo apassword 'there is a note.'
   (papyrus) >>> ls groups
   * List all (group_id, group) pairs:
 	(0, web)
@@ -96,7 +97,7 @@ some instance::
       group:  web
      record:  yahoo
       value:  apassword
-       note:  None
+       note:  there is a note.
     created:  2012-10-19_22:24:31.656777
      update:  2012-10-19_22:24:31.656777
   (papyrus) >>> 

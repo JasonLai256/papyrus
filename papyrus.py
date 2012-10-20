@@ -278,11 +278,15 @@ class Papyrus(cmd.Cmd):
                    u"`help {2}` get help message!").format(cmd, line, cmd)
         if not line:
             raise PapyrusException(err_msg)
-        argv = line.strip().split()
-        if len(argv) not in lengths:
+        if ("'" in line or '"' in line) and len(line.split()) >= 4:
+            args = line.split(' ', 3)
+            args[3] = args[3].strip("'\"")
+        else:
+            args = line.strip().split()
+        if len(args) not in lengths:
             raise PapyrusException(err_msg)
 
-        return argv
+        return args
 
     def _ls_case_groups(self, target):
         print u"* List all (group_id, group) pairs:"
@@ -326,8 +330,8 @@ class Papyrus(cmd.Cmd):
         
         List all the groups or records existing in the current program.
         """
-        argv = self._validate_line(line, lengths=(1, 2), cmd='ls')
-        target = argv[0]
+        args = self._validate_line(line, lengths=(1, 2), cmd='ls')
+        target = args[0]
         if target.isdigit():
             target = int(target)
 
@@ -358,9 +362,9 @@ class Papyrus(cmd.Cmd):
 
         Show the full infomation about specific record.
         """
-        argv = self._validate_line(line, lengths=(1,), cmd='info')
+        args = self._validate_line(line, lengths=(1,), cmd='info')
         try:
-            rid = int(argv[0])
+            rid = int(args[0])
             record = self.handler.records['_rid'][rid]
         except ValueError:
             print "The `record_id` should be a integer."
@@ -386,12 +390,13 @@ class Papyrus(cmd.Cmd):
           - group:  group name of the record.
           - item:   item name of the record.
           - value:  value of the record. well, there is the place store the password.
-          - note(optional):  note of the record, the lengths of the note is unlimit.
+          - note(optional):  note of the record, the lengths of the note is unlimit
+                             but should be within the quotation marks (' or ").
 
         Add a record to the program.
         """
-        argv = self._validate_line(line, lengths=(3, 4), cmd='add')
-        if not self.handler.add_record(*argv):
+        args = self._validate_line(line, lengths=(3, 4), cmd='add')
+        if not self.handler.add_record(*args):
             raise PapyrusException(u"Fail to add record to the program.")
 
     def do_update(self, line):
@@ -401,11 +406,13 @@ class Papyrus(cmd.Cmd):
         args::
           - record_id:  the id of the record, `ls` is a useful command for
                         lookup the record id.
+          - note(optional):  note of the record, the lengths of the note is unlimit
+                             but should be within the quotation marks (' or ").
 
         Update a record to the program.
         """
-        argv = self._validate_line(line, lengths=(2, 3), cmd='update')
-        if not self.handler.update_record(*argv):
+        args = self._validate_line(line, lengths=(2, 3), cmd='update')
+        if not self.handler.update_record(*args):
             raise PapyrusException(u"Fail to update record to the program.")
 
     def do_delete(self, line):
@@ -418,8 +425,8 @@ class Papyrus(cmd.Cmd):
 
         Delete a record to the program.
         """
-        argv = self._validate_line(line, lengths=(1,), cmd='delete')
-        if not self.handler.delete_record(*argv):
+        args = self._validate_line(line, lengths=(1,), cmd='delete')
+        if not self.handler.delete_record(*args):
             raise PapyrusException(u"Fail to delete record to the program.")
 
     # def complete_update(self, text, line, begidx, endidx):
