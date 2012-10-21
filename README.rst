@@ -34,7 +34,7 @@ Support Commands:
       - group:  group name of the record.
       - item:   item name of the record.
       - value:  value of the record. well, there is the place store the password.
-	- note(optional):  note of the record, the lengths of the note is unlimit but should be within the quotation marks (' or ").
+      - note(optional):  note of the record, the lengths of the note is unlimit but should be within the quotation marks (' or ").
 
     Add a record to the program.
 
@@ -43,7 +43,7 @@ Support Commands:
 
     args:
       - record_id:  the id of the record, `ls` is a useful command for lookup the record id.
-	- note(optional):  note of the record, the lengths of the note is unlimit but should be within the quotation marks (' or ").
+      - note(optional):  note of the record, the lengths of the note is unlimit but should be within the quotation marks (' or ").
 
     Update a record to the program.
 
@@ -58,7 +58,7 @@ Support Commands:
 Example
 -------
 
-some instance::
+some instance code::
 
   ➜  papyrus ✗ python papyrus.py
   Papyrus: A simple cmd program that manage the infomation of passwords.
