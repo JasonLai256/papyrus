@@ -278,9 +278,13 @@ class Papyrus(cmd.Cmd):
                    u"`help {2}` get help message!").format(cmd, line, cmd)
         if not line:
             raise PapyrusException(err_msg)
-        if ("'" in line or '"' in line) and len(line.split()) >= 4:
-            args = line.split(' ', 3)
-            args[3] = args[3].strip("'\"")
+        if ("'" in line or '"' in line):
+            if cmd == 'add' and len(line.split()) >= 4:
+                splitnum = 3
+            elif cmd == 'update' and len(line.split()) >= 3:
+                splitnum = 2
+            args = line.split(' ', splitnum)
+            args[splitnum] = args[splitnum].strip("'\"")
         else:
             args = line.strip().split()
         if len(args) not in lengths:
@@ -306,8 +310,8 @@ class Papyrus(cmd.Cmd):
                u"\t(record_id, group, itemname, value)").format(groupname)
         for record in self.handler.records['_gid'][target]:
             enc_value = '****'.join((record['value'][0], record['value'][-1]))
-            print u"\t({0}, {1}, {2}, {3})".format(record['id'], record['group'],
-                                                   record['itemname'], enc_value)
+            print u"\t({0}, {1}, {2})".format(record['id'], record['itemname'],
+                                              enc_value)
 
     def _ls_case_group_name(self, target):
         print (u"* List all infomation of the records in Group - `{0}`:\n"
@@ -315,8 +319,8 @@ class Papyrus(cmd.Cmd):
         for itemname in self.handler.records[target].keys():
             record = self.handler.records[target][itemname]
             enc_value = '****'.join((record['value'][0], record['value'][-1]))
-            print u"\t({0}, {1}, {2}, {3})".format(record['id'], record['group'],
-                                                   record['itemname'], enc_value)        
+            print u"\t({0}, {1}, {2})".format(record['id'], record['itemname'],
+                                              enc_value)
 
     def do_ls(self, line):
         """Help message:
