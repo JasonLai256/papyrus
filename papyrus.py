@@ -38,7 +38,7 @@ class AESHandler(object):
         self.cipher = ''
         self.data = None
         # self._records is a proxy structure mapping to the records of 
-        # self.data and is use for better contrive records.
+        # self.data and is use for better retrieve records.
         self._records = defaultdict(dict)
 
     def initialize(self, cipher, filepath='records.dat'):
@@ -327,13 +327,19 @@ class Papyrus(cmd.Cmd):
         Usage: ls {groups | records | `group_name` | `group_id`}
 
         selected args::
-          - `group`:  literal key word, show all the groups
+          - single `ls` command: default to show all groups
+          - `groups`:  literal key word, show all the groups
           - `records`:  literal key word, show all the records
           - group_name: group name, show all the records in the specific group
           - group_id:  group id, show all the records in the specific group
         
         List all the groups or records existing in the current program.
         """
+        # single `ls` command, default to show all groups
+        if line == '':
+            self._ls_case_groups('groups')
+            return
+        
         args = self._validate_line(line, lengths=(1, 2), cmd='ls')
         target = args[0]
         if target.isdigit():

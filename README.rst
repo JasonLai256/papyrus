@@ -11,8 +11,9 @@ Support Commands:
 - ls::
     Usage: ls {groups | records | `group_name` | `group_id`}
 
-    selected args:
-      - `group`:  literal key word, show all the groups
+    selected args::
+      - single `ls` command: default to show all groups
+      - `groups`:  literal key word, show all the groups
       - `records`:  literal key word, show all the records
       - group_name: group name, show all the records in the specific group
       - group_id:  group id, show all the records in the specific group
