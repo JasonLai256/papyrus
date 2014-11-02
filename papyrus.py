@@ -49,11 +49,11 @@ class AESHandler(object):
         """
         self.filepath = filepath
         self.cipher = self.figure_32Byte_key(cipher)
-        
+
         # first initial the program
         if not os.path.exists(self.filepath) or \
                                not os.path.getsize(self.filepath):
-            # initiali the self.data and self._records
+            # initiali the empty self.data and self._records
             self._init_data()
             self.initialized = True
             return self.initialized
@@ -111,6 +111,38 @@ class AESHandler(object):
         else:
             return False
 
+    def move_record(self, record_id, group_id):
+        record_id, group_id = int(record_id), int(group_id)
+        if record_id in self._records['_rid'] and group_id in self._records['_gid']:
+            try:
+                record = self._records['_rid'][record_id]
+                if record['gid'] == group_id:
+                    print 'The group_id already is the record gid, no need to move.'
+                    return False
+                if len(self._records['_gid'][group_id]) == 0:
+                    return False
+
+                old_gid = record['gid']
+                old_group = record['group']
+                new_group = self._records['_gid'][group_id][0]['group']
+                record['gid'] = group_id
+                record['group'] = new_group
+                record['updated'] = datetime.today().isoformat('_')
+
+                # delete the old data
+                self._del_record_in_gid(record_id, old_gid)
+                item = record['itemname']
+                del self._records[old_group][item]
+
+                self._adjust_structure(record)
+                self.write()
+                return True
+            except Exception, err:
+                self.log.error('Error occur in updating record - %s', err)
+                return False
+        else:
+            return False
+
     def delete_record(self, record_id):
         record_id = int(record_id)
         if self._records['_rid'].has_key(record_id):
@@ -124,11 +156,7 @@ class AESHandler(object):
                     del self._records['_gid'][gid]
                     del self._records[group]
                 else:
-                    # delete the record in the _records['_gid']
-                    for i in range(len(self._records['_gid'][gid])):
-                        if self._records['_gid'][gid][i]['id'] == rid:
-                            del self._records['_gid'][gid][i]
-                            break
+                    self._del_record_in_gid(rid, gid)
 
                 # delete the record in the data['records']
                 for i in range(len(self.data['records'])):
@@ -155,7 +183,7 @@ class AESHandler(object):
             'currentID': 0,
             'currentGID': 0,
         }
-        self.data = structure        
+        self.data = structure
         self._setup_structure()
 
     def _setup_structure(self):
@@ -173,6 +201,17 @@ class AESHandler(object):
         # groupmap is a helper subdict contain (group, gid) pairs
         if not self._records['_gidmap'].has_key(group):
             self._records['_gidmap'][group] = record['gid']
+
+    def _del_record_in_gid(self, rid, gid):
+        """delete the record in the _records['_gid'].
+
+        :param rid: the id of the record.
+        :param gid: the id of the group.
+        """
+        for i in range(len(self._records['_gid'][gid])):
+            if self._records['_gid'][gid][i]['id'] == rid:
+                del self._records['_gid'][gid][i]
+                break
 
     def _compose_record(self, group, item, value, note=None):
         created = datetime.today().isoformat('_')
@@ -338,14 +377,14 @@ class Papyrus(cmd.Cmd):
           - `records`:  literal key word, show all the records
           - group_name: group name, show all the records in the specific group
           - group_id:  group id, show all the records in the specific group
-        
+
         List all the groups or records existing in the current program.
         """
         # single `ls` command, default to show all groups
         if line == '':
             self._ls_case_groups('groups')
             return
-        
+
         args = self._validate_line(line, lengths=(1, 2), cmd='ls')
         target = args[0]
         if target.isdigit():
@@ -444,6 +483,21 @@ class Papyrus(cmd.Cmd):
         args = self._validate_line(line, lengths=(1,), cmd='delete')
         if not self.handler.delete_record(*args):
             raise PapyrusException(u"Fail to delete record to the program.")
+
+    def do_mv(self, line):
+        """Help message:
+        Usage: mv record_id group_id
+
+        args::
+          - record_id:  the id of the record, `ls` is a useful command for
+                        lookup the record id.
+          - group_id:  the id of the group.
+
+        Move a record to the specify group.
+        """
+        args = self._validate_line(line, lengths=(2,), cmd='mv')
+        if not self.handler.move_record(*args):
+            raise PapyrusException(u"Fail to move record to the program.")
 
     # def complete_update(self, text, line, begidx, endidx):
     #     clist = []

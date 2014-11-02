@@ -62,6 +62,16 @@ Support Commands:
 
     Delete a record to the program.
 
+- mv::
+    Usage: mv record_id group_id
+
+    args::
+      - record_id:  the id of the record, `ls` is a useful command for
+                    lookup the record id.
+      - group_id:  the id of the group.
+
+    Move a record to the specify group.
+
 Example
 -------
 
