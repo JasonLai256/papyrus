@@ -248,11 +248,17 @@ class Papyrus(cmd.Cmd):
         self.handler = AESHandler()
         try:
             self.stdout.write(str(self.introduction)+"\n")
-            self.stdout.write(u"Enter Info's File Path (default `records.dat`): ")
-            self.stdout.flush()
-            filepath = self.stdin.readline().strip()
-            if not filepath:
-                filepath = 'records.dat'
+            # First check the Env variable
+            if 'PAPYRUS_RECORD_PATH' in os.environ:
+                filepath = os.environ['PAPYRUS_RECORD_PATH']
+                self.stdout.write(u"From Env, the record file path is `%s`.\n" % filepath)
+                self.stdout.flush()
+            else:
+                self.stdout.write(u"Enter Info's File Path (default `records.dat`): ")
+                self.stdout.flush()
+                filepath = self.stdin.readline().strip()
+                if not filepath:
+                    filepath = 'records.dat'
             pw = getpass.getpass(u'Please Enter The Initiali Cipher: ')
             if not self.handler.initialize(pw, filepath):
                 sys.exit('ERROR: invalid cipher or unknown exception.')

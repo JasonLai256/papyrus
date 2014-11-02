@@ -61,7 +61,7 @@ Example
 
 some instance code::
 
-  ➜  papyrus ✗ python papyrus.py
+  > papyrus
   Papyrus: A simple cmd program that manage the infomation of passwords.
 
   Enter Info's File Path (default `records.dat`): 
@@ -102,4 +102,17 @@ some instance code::
     created:  2012-10-19_22:24:31.656777
      update:  2012-10-19_22:24:31.656777
   (papyrus) >>> 
+
+Or, you can define Env variable - PAPYRUS_RECORD_PATH - to save our life for always
+input the record file path. Like below,
+
+  # first need to edit the shell rc file, append the line
+  export PAPYRUS_RECORD_PATH=Path/to/the/records.dat
+
+  > papyrus
+  Papyrus: A simple cmd program that manage the infomation of passwords.
+
+  From Env, the record file path is `Path/to/the/records.dat`.
+  Please Enter The Initiali Cipher:
+  (papyrus) >>>
 

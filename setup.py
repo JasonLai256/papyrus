@@ -1,6 +1,6 @@
 # -*- coding:utf-8 -*-
 
-__version__ = "0.3"
+__version__ = "0.4"
 __author__ = [
     "Jason Lai <jasonlai256@gmail.com>"
 ]
@@ -14,12 +14,15 @@ setup(name='papyrus',
       description='A safely (use AES256 encrypt/decrypt) simple cmd program that manage the infomation of passwords.',
       author='Jason Lai',
       author_email='jasonlai256@gmail.com',
-      url='TODO -----  github',
+      url='https://github.com/JasonLai256/papyrus',
       py_modules=['papyrus'],
       license="BSD",
       install_requires=[
           'pycrypto',
-      ]
+      ],
+      scripts=[
+         'bin/papyrus',
+      ],
       platforms=["any"],
       classifiers=[
           'Environment :: Console',
