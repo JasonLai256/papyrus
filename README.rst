@@ -2,6 +2,12 @@ Papyrus
 =======
 Papyrus is a safely (use AES256 encrypt/decrypt) simple cmd program that manage the infomation of passwords.
 
+Install
+-------
+
+Now you need to install the package manually.::
+
+  python install setup.py
 
 Usage
 -----
@@ -59,7 +65,7 @@ Support Commands:
 Example
 -------
 
-some instance code::
+Below is a few example view,::
 
   > papyrus
   Papyrus: A simple cmd program that manage the infomation of passwords.
@@ -104,7 +110,7 @@ some instance code::
   (papyrus) >>> 
 
 Or, you can define Env variable - PAPYRUS_RECORD_PATH - to save our life for always
-input the record file path. Like below,
+input the record file path. Like below,::
 
   # first need to edit the shell rc file, append the line
   export PAPYRUS_RECORD_PATH=Path/to/the/records.dat
