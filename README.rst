@@ -5,7 +5,7 @@ Papyrus is a safely (use AES256 encrypt/decrypt) simple cmd program that manage 
 Install
 -------
 
-When you clone the git repository, you can install the package manually::
+When you were cloned the git repository, you can install the package manually::
 
   python install setup.py
 
