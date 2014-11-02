@@ -5,7 +5,7 @@ Papyrus is a safely (use AES256 encrypt/decrypt) simple cmd program that manage 
 Install
 -------
 
-Now you need to install the package manually.::
+When you clone the git repository, you can install the package manually::
 
   python install setup.py
 
@@ -110,7 +110,7 @@ Below is a few example view,::
   (papyrus) >>> 
 
 Or, you can define Env variable - PAPYRUS_RECORD_PATH - to save our life for always
-input the record file path. Like below,::
+input the record file path. Like below::
 
   # first need to edit the shell rc file, append the line
   export PAPYRUS_RECORD_PATH=Path/to/the/records.dat
